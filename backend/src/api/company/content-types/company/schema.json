@@ -1,0 +1,95 @@
+{
+  "kind": "collectionType",
+  "collectionName": "companies",
+  "info": {
+    "singularName": "company",
+    "pluralName": "companies",
+    "displayName": "Company"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "string"
+    },
+    "description": {
+      "type": "blocks"
+    },
+    "logo": {
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ],
+      "type": "media",
+      "multiple": true
+    },
+    "coverImage": {
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ],
+      "type": "media",
+      "multiple": true
+    },
+    "website": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "size": {
+      "type": "enumeration",
+      "enum": [
+        "one_to_ten",
+        "eleven_to_fifty",
+        "fifty_one_to_two_hundred",
+        "two_hundred_one_to_five_hundred",
+        "five_hundred_one_to_one_thousand",
+        "one_thousand_one_to_five_thousand",
+        "five_thousand_above"
+      ]
+    },
+    "foundedYear": {
+      "type": "integer"
+    },
+    "companyType": {
+      "type": "enumeration",
+      "enum": [
+        "public",
+        "private",
+        "non-profit",
+        "government",
+        "startup",
+        "other"
+      ]
+    },
+    "socialMedia": {
+      "type": "json"
+    },
+    "email": {
+      "type": "email"
+    },
+    "phoneNumber": {
+      "type": "string"
+    },
+    "companyStatus": {
+      "type": "enumeration",
+      "enum": [
+        "active",
+        "inactive",
+        "pending_verification"
+      ]
+    },
+    "isVerified": {
+      "type": "boolean"
+    }
+  }
+}

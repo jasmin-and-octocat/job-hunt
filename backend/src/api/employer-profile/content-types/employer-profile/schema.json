@@ -1,0 +1,38 @@
+{
+  "kind": "collectionType",
+  "collectionName": "employer_profiles",
+  "info": {
+    "singularName": "employer-profile",
+    "pluralName": "employer-profiles",
+    "displayName": "EmployerProfile"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "firstName": {
+      "type": "string"
+    },
+    "lastName": {
+      "type": "string"
+    },
+    "email": {
+      "type": "email"
+    },
+    "phone_number": {
+      "type": "string"
+    },
+    "designation": {
+      "type": "string"
+    },
+    "linkedin": {
+      "type": "string"
+    },
+    "users_permissions_user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "employer_profile"
+    }
+  }
+}
