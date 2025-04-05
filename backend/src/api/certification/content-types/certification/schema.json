@@ -1,0 +1,38 @@
+{
+  "kind": "collectionType",
+  "collectionName": "certifications",
+  "info": {
+    "singularName": "certification",
+    "pluralName": "certifications",
+    "displayName": "certification"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "issuingOrganization": {
+      "type": "string"
+    },
+    "issueDate": {
+      "type": "date"
+    },
+    "expirationDate": {
+      "type": "date"
+    },
+    "credentialID": {
+      "type": "string"
+    },
+    "credentialURL": {
+      "type": "string"
+    },
+    "job_seeker_profile": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::job-seeker-profile.job-seeker-profile",
+      "inversedBy": "certifications"
+    }
+  }
+}

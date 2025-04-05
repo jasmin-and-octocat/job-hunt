@@ -1,0 +1,52 @@
+{
+  "kind": "collectionType",
+  "collectionName": "notifications",
+  "info": {
+    "singularName": "notification",
+    "pluralName": "notifications",
+    "displayName": "Notification"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "job_match",
+        "application_status",
+        "interview_invitation",
+        "new_job_from_followed_company",
+        "expiring_job",
+        "system_notification"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "content": {
+      "type": "blocks"
+    },
+    "isRead": {
+      "type": "boolean"
+    },
+    "users_permissions_user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "notifications"
+    },
+    "job": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::job.job",
+      "inversedBy": "notifications"
+    },
+    "job_application": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::job-application.job-application",
+      "inversedBy": "notifications"
+    }
+  }
+}

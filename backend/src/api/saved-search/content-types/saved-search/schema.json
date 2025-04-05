@@ -1,0 +1,61 @@
+{
+  "kind": "collectionType",
+  "collectionName": "saved_searches",
+  "info": {
+    "singularName": "saved-search",
+    "pluralName": "saved-searches",
+    "displayName": "SavedSearch"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "keywords": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "jobType": {
+      "type": "json"
+    },
+    "experienceLevel": {
+      "type": "json"
+    },
+    "salaryMin": {
+      "type": "integer"
+    },
+    "salaryMax": {
+      "type": "integer"
+    },
+    "remoteOnly": {
+      "type": "boolean"
+    },
+    "tags": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::tag.tag",
+      "inversedBy": "saved_searches"
+    },
+    "skills": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::skill.skill",
+      "inversedBy": "saved_searches"
+    },
+    "users_permissions_user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "saved_searches"
+    },
+    "emailAlertFrequency": {
+      "type": "enumeration",
+      "enum": [
+        "never",
+        "daily",
+        "weekly"
+      ]
+    }
+  }
+}

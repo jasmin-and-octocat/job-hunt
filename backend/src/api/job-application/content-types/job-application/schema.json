@@ -1,0 +1,72 @@
+{
+  "kind": "collectionType",
+  "collectionName": "job_applications",
+  "info": {
+    "singularName": "job-application",
+    "pluralName": "job-applications",
+    "displayName": "JobApplication"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "job_seeker_profile": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::job-seeker-profile.job-seeker-profile",
+      "inversedBy": "job_applications"
+    },
+    "job": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::job.job",
+      "inversedBy": "job_applications"
+    },
+    "resume": {
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ],
+      "type": "media",
+      "multiple": true
+    },
+    "coverLetter": {
+      "type": "blocks"
+    },
+    "applicationDate": {
+      "type": "datetime"
+    },
+    "applicationStatus": {
+      "type": "enumeration",
+      "enum": [
+        "pending",
+        "reviewed",
+        "shortlisted",
+        "rejected",
+        "interview_scheduled",
+        "offer_extended",
+        "hired"
+      ]
+    },
+    "notes": {
+      "type": "blocks"
+    },
+    "interviewDate": {
+      "type": "datetime"
+    },
+    "rejectionReason": {
+      "type": "blocks"
+    },
+    "customQuestions": {
+      "type": "json"
+    },
+    "notifications": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::notification.notification",
+      "mappedBy": "job_application"
+    }
+  }
+}

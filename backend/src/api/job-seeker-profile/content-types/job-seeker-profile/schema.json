@@ -76,6 +76,36 @@
       "relation": "oneToOne",
       "target": "plugin::users-permissions.user",
       "inversedBy": "job_seeker_profile"
+    },
+    "job_applications": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::job-application.job-application",
+      "mappedBy": "job_seeker_profile"
+    },
+    "experiences": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::experience.experience",
+      "mappedBy": "job_seeker_profile"
+    },
+    "educations": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::education.education",
+      "mappedBy": "job_seeker_profile"
+    },
+    "certifications": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::certification.certification",
+      "mappedBy": "job_seeker_profile"
+    },
+    "skills": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::skill.skill",
+      "mappedBy": "job_seeker_profiles"
     }
   }
 }

@@ -9,7 +9,7 @@
     "displayName": "User"
   },
   "options": {
-    "timestamps": true
+    "draftAndPublish": false
   },
   "attributes": {
     "username": {
@@ -69,12 +69,24 @@
       "type": "relation",
       "relation": "oneToOne",
       "target": "api::employer-profile.employer-profile",
-      "mappedBy": "users_permissions_user"
+      "inversedBy": "users_permissions_user"
     },
     "job_seeker_profile": {
       "type": "relation",
       "relation": "oneToOne",
       "target": "api::job-seeker-profile.job-seeker-profile",
+      "mappedBy": "users_permissions_user"
+    },
+    "notifications": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::notification.notification",
+      "mappedBy": "users_permissions_user"
+    },
+    "saved_searches": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::saved-search.saved-search",
       "mappedBy": "users_permissions_user"
     }
   }

@@ -1,0 +1,41 @@
+{
+  "kind": "collectionType",
+  "collectionName": "educations",
+  "info": {
+    "singularName": "education",
+    "pluralName": "educations",
+    "displayName": "Education"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "institution": {
+      "type": "string"
+    },
+    "degree": {
+      "type": "string"
+    },
+    "fieldOfStudy": {
+      "type": "string"
+    },
+    "startDate": {
+      "type": "date"
+    },
+    "endDate": {
+      "type": "date"
+    },
+    "isCurrentEducation": {
+      "type": "boolean"
+    },
+    "description": {
+      "type": "blocks"
+    },
+    "job_seeker_profile": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::job-seeker-profile.job-seeker-profile",
+      "inversedBy": "educations"
+    }
+  }
+}

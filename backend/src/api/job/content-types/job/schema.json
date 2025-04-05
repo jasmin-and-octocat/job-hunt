@@ -1,0 +1,110 @@
+{
+  "kind": "collectionType",
+  "collectionName": "jobs",
+  "info": {
+    "singularName": "job",
+    "pluralName": "jobs",
+    "displayName": "Job",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "Title": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "Title"
+    },
+    "Description": {
+      "type": "blocks"
+    },
+    "responsibilities": {
+      "type": "blocks"
+    },
+    "requirements": {
+      "type": "blocks"
+    },
+    "benefits": {
+      "type": "blocks"
+    },
+    "company": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::company.company",
+      "inversedBy": "jobs"
+    },
+    "location": {
+      "type": "string"
+    },
+    "isRemote": {
+      "type": "boolean"
+    },
+    "salaryRange": {
+      "type": "json"
+    },
+    "jobType": {
+      "type": "enumeration",
+      "enum": [
+        "full_time",
+        "part_time",
+        "contract",
+        "internship",
+        "freelance"
+      ]
+    },
+    "experience": {
+      "type": "enumeration",
+      "enum": [
+        "entry",
+        "mid",
+        "senior",
+        "executive"
+      ]
+    },
+    "datePosted": {
+      "type": "datetime"
+    },
+    "applicationDeadline": {
+      "type": "datetime"
+    },
+    "jobStatus": {
+      "type": "enumeration",
+      "enum": [
+        "draft",
+        "published",
+        "closed",
+        "filled"
+      ]
+    },
+    "eligibilityCriteria": {
+      "type": "blocks"
+    },
+    "job_applications": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::job-application.job-application",
+      "mappedBy": "job"
+    },
+    "skills": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::skill.skill",
+      "mappedBy": "jobs"
+    },
+    "tags": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::tag.tag",
+      "mappedBy": "jobs"
+    },
+    "notifications": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::notification.notification",
+      "mappedBy": "job"
+    }
+  }
+}

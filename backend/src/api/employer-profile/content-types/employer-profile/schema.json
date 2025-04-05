@@ -4,7 +4,8 @@
   "info": {
     "singularName": "employer-profile",
     "pluralName": "employer-profiles",
-    "displayName": "EmployerProfile"
+    "displayName": "EmployerProfile",
+    "description": ""
   },
   "options": {
     "draftAndPublish": true
@@ -19,7 +20,7 @@
     "email": {
       "type": "email"
     },
-    "phone_number": {
+    "phoneNnumber": {
       "type": "string"
     },
     "designation": {
@@ -32,7 +33,7 @@
       "type": "relation",
       "relation": "oneToOne",
       "target": "plugin::users-permissions.user",
-      "inversedBy": "employer_profile"
+      "mappedBy": "employer_profile"
     }
   }
 }

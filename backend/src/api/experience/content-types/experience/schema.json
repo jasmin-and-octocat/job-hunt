@@ -1,0 +1,41 @@
+{
+  "kind": "collectionType",
+  "collectionName": "experiences",
+  "info": {
+    "singularName": "experience",
+    "pluralName": "experiences",
+    "displayName": "Experience"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "jobTitle": {
+      "type": "string"
+    },
+    "companyName": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "startDate": {
+      "type": "date"
+    },
+    "endDate": {
+      "type": "date"
+    },
+    "isCurrentJob": {
+      "type": "boolean"
+    },
+    "description": {
+      "type": "blocks"
+    },
+    "job_seeker_profile": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::job-seeker-profile.job-seeker-profile",
+      "inversedBy": "experiences"
+    }
+  }
+}
