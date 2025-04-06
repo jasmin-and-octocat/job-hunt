@@ -71,12 +71,6 @@
       "target": "api::employer-profile.employer-profile",
       "inversedBy": "users_permissions_user"
     },
-    "job_seeker_profile": {
-      "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::job-seeker-profile.job-seeker-profile",
-      "mappedBy": "users_permissions_user"
-    },
     "notifications": {
       "type": "relation",
       "relation": "oneToMany",
@@ -87,6 +81,12 @@
       "type": "relation",
       "relation": "oneToMany",
       "target": "api::saved-search.saved-search",
+      "mappedBy": "users_permissions_user"
+    },
+    "job_seeker_profile": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::job-seeker-profile.job-seeker-profile",
       "mappedBy": "users_permissions_user"
     }
   }

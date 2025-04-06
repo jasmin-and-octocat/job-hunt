@@ -373,7 +373,8 @@ export interface ApiCertificationCertification
   extends Struct.CollectionTypeSchema {
   collectionName: 'certifications';
   info: {
-    displayName: 'certification';
+    description: '';
+    displayName: 'Certification';
     pluralName: 'certifications';
     singularName: 'certification';
   };
@@ -410,6 +411,7 @@ export interface ApiCertificationCertification
 export interface ApiCompanyCompany extends Struct.CollectionTypeSchema {
   collectionName: 'companies';
   info: {
+    description: '';
     displayName: 'Company';
     pluralName: 'companies';
     singularName: 'company';
@@ -462,7 +464,7 @@ export interface ApiCompanyCompany extends Struct.CollectionTypeSchema {
         'five_thousand_above',
       ]
     >;
-    slug: Schema.Attribute.String;
+    slug: Schema.Attribute.UID<'name'>;
     socialMedia: Schema.Attribute.JSON;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &

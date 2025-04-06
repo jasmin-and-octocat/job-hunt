@@ -4,7 +4,8 @@
   "info": {
     "singularName": "company",
     "pluralName": "companies",
-    "displayName": "Company"
+    "displayName": "Company",
+    "description": ""
   },
   "options": {
     "draftAndPublish": true
@@ -13,31 +14,30 @@
     "name": {
       "type": "string"
     },
-    "slug": {
-      "type": "string"
-    },
     "description": {
       "type": "blocks"
     },
     "logo": {
+      "type": "media",
+      "multiple": true,
+      "required": false,
       "allowedTypes": [
         "images",
         "files",
         "videos",
         "audios"
-      ],
-      "type": "media",
-      "multiple": true
+      ]
     },
     "coverImage": {
+      "type": "media",
+      "multiple": true,
+      "required": false,
       "allowedTypes": [
         "images",
         "files",
         "videos",
         "audios"
-      ],
-      "type": "media",
-      "multiple": true
+      ]
     },
     "website": {
       "type": "string"
@@ -102,6 +102,10 @@
       "relation": "manyToOne",
       "target": "api::industry.industry",
       "inversedBy": "companies"
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "name"
     }
   }
 }
