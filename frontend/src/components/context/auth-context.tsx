@@ -9,6 +9,8 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import { authApi, authToken, authUser, AuthCredentials, RegisterData } from '@/lib/auth';
 import { useToast } from '@/components/ui/use-toast';
+import { getJobSeekerProfile } from '@/lib/api/job-seeker-profile';
+import { getEmployerProfile } from '@/lib/api/employer-profile';
 
 interface AuthContextValue {
   user: any | null;
@@ -93,6 +95,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       setUserType(null);
       setOnboardingComplete(false);
+      return null;
+    }
+  };
+
+  // Function to fetch user profile
+  const fetchUserProfile = async (userId: number, userType: string) => {
+    try {
+      if (userType === 'job-seeker') {
+        // Use the API function with correct field names
+        const response = await getJobSeekerProfile({ id: userId });
+        return response.data;
+      } else if (userType === 'employer') {
+        // Use the employer profile API function
+        const response = await getEmployerProfile({ id: userId });
+        return response.data;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
       return null;
     }
   };

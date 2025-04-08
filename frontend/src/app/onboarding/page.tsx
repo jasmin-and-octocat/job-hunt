@@ -133,9 +133,9 @@ const OnboardingPage = () => {
 
   return (
     <div className="flex items-center justify-center min-h-screen py-10">
-      <Card className="w-full max-w-3xl">
+      <Card className="w-full max-w-3xl pt-4 pb-6">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">{getStepTitle()}</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center py-4">{getStepTitle()}</CardTitle>
           <CardDescription className="text-center">
             {step === 1 ? (
               "Let's get started by selecting your account type"

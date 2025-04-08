@@ -81,7 +81,11 @@ export default function RootLayout({
             <AuthSync />
             <div className="min-h-screen">
               <MainContent>{children}</MainContent>
-              <div className={cn(wrapperClass)}></div>
+              <div className={cn(wrapperClass)}>
+                <footer className="py-6 text-center text-sm text-muted-foreground border-t mt-8">
+                  <p>Developed by Jasmin Rai as part of an academic project during Spring 2025, Bachelor of Technology, 2nd Semester, Alliance University</p>
+                </footer>
+              </div>
             </div>
             <Toaster />
           </AuthProvider>

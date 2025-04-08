@@ -90,7 +90,7 @@ export const OnboardingComplete = ({ userType }: OnboardingCompleteProps) => {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Need help? Contact our support team at support@jobhunt.com
+        Need help? Contact our support team at support@job-hunt-toy-project.com
       </p>
     </div>
   );

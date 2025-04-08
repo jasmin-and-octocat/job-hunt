@@ -164,8 +164,8 @@ export function JobFilters({ onFilter, onReset, isLoading = false }: JobFiltersP
               </RadioGroup>
             </CollapsibleContent>
           </Collapsible>
-          <Separator />
-          <Collapsible open={isSalaryOpen} onOpenChange={setIsSalaryOpen}>
+          {/* <Separator /> */}
+          {/* <Collapsible open={isSalaryOpen} onOpenChange={setIsSalaryOpen}>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" className="flex w-full justify-between p-0 font-semibold">
                 Salary Range
@@ -182,7 +182,7 @@ export function JobFilters({ onFilter, onReset, isLoading = false }: JobFiltersP
                 </div>
               </div>
             </CollapsibleContent>
-          </Collapsible>
+          </Collapsible> */}
           <Separator />
           <Collapsible open={isLocationOpen} onOpenChange={setIsLocationOpen}>
             <CollapsibleTrigger asChild>

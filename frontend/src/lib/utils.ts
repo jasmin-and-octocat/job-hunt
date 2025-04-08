@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // Base API URL for Strapi
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:1337"
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://job-hunt-strapi-backend.fly.dev"
 
 // Configure axios defaults
 axios.defaults.baseURL = API_URL;

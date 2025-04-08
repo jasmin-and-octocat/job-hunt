@@ -1,25 +1,25 @@
-"use client";
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+'use client';
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList
-} from "@/components/ui/command";
+  CommandList,
+} from '@/components/ui/command';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { Check, X, ChevronsUpDown, PlusCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { skillsApi } from "@/lib/api";
-import { userApi } from "@/lib/api";
-import { useToast } from "@/components/ui/use-toast";
+} from '@/components/ui/popover';
+import { Check, X, ChevronsUpDown, PlusCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { skillsApi } from '@/lib/api';
+import { userApi } from '@/lib/api';
+import { useToast } from '@/components/ui/use-toast';
 
 interface SkillsFormProps {
   user: any;
@@ -33,21 +33,21 @@ const normalizeSkill = (skill: any) => {
   if (skill && skill.attributes && skill.attributes.name) {
     return skill;
   }
-  
+
   // If it's a newly created skill and has a different structure
   if (skill && skill.name) {
     return {
       id: skill.id,
-      attributes: { name: skill.name }
+      attributes: { name: skill.name },
     };
   }
-  
+
   // As a fallback, create a structure that won't break the component
   return {
     id: skill?.id || Math.random().toString(36),
     attributes: {
-      name: skill?.name || "Unknown Skill"
-    }
+      name: skill?.name || 'Unknown Skill',
+    },
   };
 };
 
@@ -56,7 +56,7 @@ const getSkillName = (skill: any) => {
   if (skill?.attributes?.name) {
     return skill.attributes.name;
   }
-  return skill?.name || "Unknown Skill";
+  return skill?.name || 'Unknown Skill';
 };
 
 export const SkillsForm = ({ user, onNext, onBack }: SkillsFormProps) => {
@@ -66,7 +66,7 @@ export const SkillsForm = ({ user, onNext, onBack }: SkillsFormProps) => {
   const [skills, setSkills] = useState<any[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const { toast } = useToast();
 
   // Fetch skills on mount
@@ -76,11 +76,11 @@ export const SkillsForm = ({ user, onNext, onBack }: SkillsFormProps) => {
         const response = await skillsApi.getSkills({ pageSize: 100 });
         setSkills(response.data || []);
       } catch (error) {
-        console.error("Error fetching skills:", error);
+        console.error('Error fetching skills:', error);
         toast({
-          title: "Error",
-          description: "Failed to fetch skills. Please try again.",
-          variant: "destructive",
+          title: 'Error',
+          description: 'Failed to fetch skills. Please try again.',
+          variant: 'destructive',
         });
       } finally {
         setIsLoading(false);
@@ -92,10 +92,12 @@ export const SkillsForm = ({ user, onNext, onBack }: SkillsFormProps) => {
   const handleSelectSkill = (skill: any) => {
     // Normalize the skill before using it
     const normalizedSkill = normalizeSkill(skill);
-    
+
     // Check if skill is already selected
-    if (selectedSkills.some(s => s.id === normalizedSkill.id)) {
-      setSelectedSkills(selectedSkills.filter(s => s.id !== normalizedSkill.id));
+    if (selectedSkills.some((s) => s.id === normalizedSkill.id)) {
+      setSelectedSkills(
+        selectedSkills.filter((s) => s.id !== normalizedSkill.id)
+      );
     } else {
       setSelectedSkills([...selectedSkills, normalizedSkill]);
     }
@@ -103,44 +105,44 @@ export const SkillsForm = ({ user, onNext, onBack }: SkillsFormProps) => {
   };
 
   const handleRemoveSkill = (skillId: number | string) => {
-    setSelectedSkills(selectedSkills.filter(skill => skill.id !== skillId));
+    setSelectedSkills(selectedSkills.filter((skill) => skill.id !== skillId));
   };
 
   // Handle creating a new skill
   const handleCreateSkill = async () => {
     if (!search.trim()) return;
-    
+
     setIsCreatingSkill(true);
     try {
       // Create a new skill using our API
       const newSkillData = await skillsApi.createSkill({
         name: search.trim(),
-        slug: search.trim().toLowerCase().replace(/\s+/g, '-')
+        slug: search.trim().toLowerCase().replace(/\s+/g, '-'),
       });
-      
+
       // Make sure the new skill is in the expected format
       const newSkill = normalizeSkill(newSkillData.data);
-      
+
       // Add the new skill to our skills list
       setSkills([...skills, newSkill]);
-      
+
       // Select the newly created skill
       setSelectedSkills([...selectedSkills, newSkill]);
-      
+
       // Clear search
-      setSearch("");
+      setSearch('');
       setOpen(false);
-      
+
       toast({
-        title: "Skill created",
+        title: 'Skill created',
         description: `"${search.trim()}" has been added to your skills.`,
       });
     } catch (error) {
-      console.error("Error creating skill:", error);
+      console.error('Error creating skill:', error);
       toast({
-        title: "Error",
-        description: "Failed to create skill. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to create skill. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsCreatingSkill(false);
@@ -150,58 +152,64 @@ export const SkillsForm = ({ user, onNext, onBack }: SkillsFormProps) => {
   const handleSubmit = async () => {
     if (selectedSkills.length === 0) {
       toast({
-        title: "No skills selected",
-        description: "Please select at least one skill to continue.",
-        variant: "destructive",
+        title: 'No skills selected',
+        description: 'Please select at least one skill to continue.',
+        variant: 'destructive',
       });
       return;
     }
     setIsSubmitting(true);
     try {
       // Get the job seeker profile ID from user
-      const profileId = user.job_seeker_profile?.id;
-      
+      const profileId = user.job_seeker_profile?.documentId;
+
+      console.log({ user });
+
       if (!profileId) {
-        throw new Error("Profile not found. Please complete your basic profile first.");
+        throw new Error(
+          'Profile not found. Please complete your basic profile first.'
+        );
       }
       // Update the profile with selected skills
       await userApi.updateUserProfile(profileId, {
-        skills: selectedSkills.map(skill => skill.id)
+        skills: selectedSkills.map((skill) => skill.id),
       });
-      
+
       toast({
-        title: "Skills updated",
-        description: "Your skills have been added to your profile.",
+        title: 'Skills updated',
+        description: 'Your skills have been added to your profile.',
       });
-      
+
       onNext();
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to update your skills. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update your skills. Please try again.',
+        variant: 'destructive',
       });
-      console.error("Error updating skills:", error);
+      console.error('Error updating skills:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const filteredSkills = search
-    ? skills.filter(skill => {
+    ? skills.filter((skill) => {
         const skillName = getSkillName(skill);
         return skillName.toLowerCase().includes(search.toLowerCase());
       })
     : skills;
-    
+
   // Check if there's a search term but no matching skills
-  const noMatchingSkills = search.trim().length > 0 && filteredSkills.length === 0;
+  const noMatchingSkills =
+    search.trim().length > 0 && filteredSkills.length === 0;
 
   return (
     <div className="space-y-6">
       <div className="space-y-4">
         <div className="text-sm text-muted-foreground">
-          Select skills that represent your expertise. These skills will help employers find you for relevant job opportunities.
+          Select skills that represent your expertise. These skills will help
+          employers find you for relevant job opportunities.
         </div>
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
@@ -212,14 +220,14 @@ export const SkillsForm = ({ user, onNext, onBack }: SkillsFormProps) => {
               className="w-full justify-between"
               disabled={isLoading}
             >
-              {isLoading ? "Loading skills..." : "Search and select skills"}
+              {isLoading ? 'Loading skills...' : 'Search and select skills'}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-full p-0">
             <Command>
-              <CommandInput 
-                placeholder="Search skills..." 
+              <CommandInput
+                placeholder="Search skills..."
                 value={search}
                 onValueChange={setSearch}
               />
@@ -230,18 +238,18 @@ export const SkillsForm = ({ user, onNext, onBack }: SkillsFormProps) => {
                       <p className="text-sm text-muted-foreground mb-2">
                         No skills found. Create "{search.trim()}"?
                       </p>
-                      <Button 
+                      <Button
                         size="sm"
                         className="w-full"
                         onClick={handleCreateSkill}
                         disabled={isCreatingSkill}
                       >
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        {isCreatingSkill ? "Creating..." : "Create New Skill"}
+                        {isCreatingSkill ? 'Creating...' : 'Create New Skill'}
                       </Button>
                     </div>
                   ) : (
-                    "No skills found."
+                    'No skills found.'
                   )}
                 </CommandEmpty>
                 <CommandGroup heading="Available Skills">
@@ -255,10 +263,10 @@ export const SkillsForm = ({ user, onNext, onBack }: SkillsFormProps) => {
                       >
                         <Check
                           className={cn(
-                            "mr-2 h-4 w-4",
-                            selectedSkills.some(s => s.id === skill.id) 
-                              ? "opacity-100" 
-                              : "opacity-0"
+                            'mr-2 h-4 w-4',
+                            selectedSkills.some((s) => s.id === skill.id)
+                              ? 'opacity-100'
+                              : 'opacity-0'
                           )}
                         />
                         {skillName}
@@ -271,10 +279,14 @@ export const SkillsForm = ({ user, onNext, onBack }: SkillsFormProps) => {
           </PopoverContent>
         </Popover>
         <div className="mt-4">
-          <h4 className="text-sm font-medium mb-2">Selected Skills ({selectedSkills.length}):</h4>
+          <h4 className="text-sm font-medium mb-2">
+            Selected Skills ({selectedSkills.length}):
+          </h4>
           <div className="flex flex-wrap gap-2">
             {selectedSkills.length === 0 ? (
-              <div className="text-sm text-muted-foreground">No skills selected yet</div>
+              <div className="text-sm text-muted-foreground">
+                No skills selected yet
+              </div>
             ) : (
               selectedSkills.map((skill) => (
                 <Badge key={skill.id} className="pl-2 pr-1 py-1">
@@ -297,8 +309,11 @@ export const SkillsForm = ({ user, onNext, onBack }: SkillsFormProps) => {
         <Button type="button" variant="outline" onClick={onBack}>
           Back
         </Button>
-        <Button onClick={handleSubmit} disabled={isSubmitting || selectedSkills.length === 0}>
-          {isSubmitting ? "Saving..." : "Continue"}
+        <Button
+          onClick={handleSubmit}
+          disabled={isSubmitting || selectedSkills.length === 0}
+        >
+          {isSubmitting ? 'Saving...' : 'Continue'}
         </Button>
       </div>
       <div className="text-sm text-muted-foreground text-center">

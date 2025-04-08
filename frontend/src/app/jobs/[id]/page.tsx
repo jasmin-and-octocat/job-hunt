@@ -1,7 +1,8 @@
 "use client";
+
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Briefcase,
@@ -28,33 +29,84 @@ import { formatRelativeDate } from '@/lib/utils';
 import { userApi } from '@/lib/api';
 import { useToast } from '@/components/ui/use-toast';
 
+// Helper function to render rich text content
+const renderRichText = (content: any[]) => {
+  if (!content || !Array.isArray(content)) return '<p>No content provided.</p>';
+
+  return content.map((block: {
+    type: string;
+    children?: { text: string }[]
+  }) => {
+    if (block.type === 'paragraph' && block.children && block.children.length > 0) {
+      return `<p>${block.children.map((child) => child.text).join('')}</p>`;
+    }
+    return '';
+  }).join('');
+};
+
+// Format job type display
+const formatJobType = (type: string) => {
+  switch (type) {
+    case 'full_time':
+      return 'Full-time';
+    case 'part_time':
+      return 'Part-time';
+    case 'contract':
+      return 'Contract';
+    case 'internship':
+      return 'Internship';
+    case 'freelance':
+      return 'Freelance';
+    default:
+      return type;
+  }
+};
+
+// Format salary display
+const formatSalary = (salary: string | { min?: number; max?: number; currency?: string } | null | undefined) => {
+  if (!salary) return 'Salary not specified';
+  
+  // Handle empty string for salaryRange
+  if (typeof salary === 'string' && salary === '') return 'Salary not specified';
+  
+  if (typeof salary === 'string') return salary;
+  
+  return `${salary.currency || '₹'}${salary.min || 0}k - ${salary.currency || '₹'}${salary.max || 0}k`;
+};
+
 export default function JobDetailsPage({
-  params,
+  params
 }: {
-  params: { id: string };
+  params: { id: string }
 }) {
-  // Get job ID or slug from URL params
-  const jobIdOrSlug = params.id;
   const { toast } = useToast();
+  const [jobId, setJobId] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Fetch job details
-  const { job, error: jobError, isLoading: isJobLoading } = useJobDetails(jobIdOrSlug);
+  // Set job ID once component mounts to avoid React.use() issues
+  useEffect(() => {
+    setJobId(params.id);
+  }, [params.id]);
+
+  // Fetch job details when jobId is available
+  const { job, error: jobError, isLoading: isJobLoading } = useJobDetails(jobId || '');
   
   // Fetch company details if job data is available
-  const companyId = job?.attributes?.company?.data?.id;
+  const companyId = job?.company?.id;
   const { company, error: companyError, isLoading: isCompanyLoading } = 
     useCompanyDetails(companyId || null);
 
   // Function to save job
   const handleSaveJob = async () => {
+    if (!jobId) return;
+    
     // This is a placeholder - in a real app, you would get the user ID from auth context
     const userId = 1; // Replace with actual user ID from auth
     
     try {
       setIsSaving(true);
-      await userApi.saveJob(userId, Number(jobIdOrSlug));
+      await userApi.saveJob(userId, Number(jobId));
       setIsSaved(true);
       toast({
         title: "Job saved",
@@ -73,7 +125,7 @@ export default function JobDetailsPage({
   };
 
   // Handle loading state
-  if (isJobLoading) {
+  if (!jobId || isJobLoading) {
     return (
       <div className="flex min-h-screen flex-col">
         <Header />
@@ -170,7 +222,7 @@ export default function JobDetailsPage({
     );
   }
 
-  // Get job data
+  // Get job data from the API response
   const {
     Title,
     Description,
@@ -184,31 +236,9 @@ export default function JobDetailsPage({
     datePosted,
     skills,
     publishedAt,
-  } = job.attributes;
-
-  // Format job type display
-  const formatJobType = (type: string) => {
-    switch (type) {
-      case 'full_time':
-        return 'Full-time';
-      case 'part_time':
-        return 'Part-time';
-      case 'contract':
-        return 'Contract';
-      case 'internship':
-        return 'Internship';
-      case 'freelance':
-        return 'Freelance';
-      default:
-        return type;
-    }
-  };
-
-  // Format salary display
-  const formatSalary = (salary: { min?: number; max?: number; currency?: string } | null | undefined) => {
-    if (!salary) return 'Salary not specified';
-    return `${salary.currency || '₹'}${salary.min}k - ${salary.currency || '₹'}${salary.max}k`;
-  };
+    company: jobCompany,
+    eligibilityCriteria
+  } = job;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -234,7 +264,7 @@ export default function JobDetailsPage({
                       <CardDescription className="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <div className="flex items-center gap-1">
                           <Building2 className="h-4 w-4" />
-                          <span>{job.attributes.company?.data?.attributes?.name || 'Company'}</span>
+                          <span>{jobCompany?.name || 'Company'}</span>
                         </div>
                         <span className="hidden sm:inline-block">•</span>
                         <div className="flex items-center gap-1">
@@ -250,7 +280,7 @@ export default function JobDetailsPage({
                     </div>
                     <div className="flex flex-row gap-2 sm:flex-col">
                       <Button asChild className="flex-1">
-                        <Link href={`/jobs/${params.id}/apply`}>Apply Now</Link>
+                        <Link href={`/jobs/${jobId}/apply`}>Apply Now</Link>
                       </Button>
                       <div className="flex gap-2">
                         <Button
@@ -292,12 +322,12 @@ export default function JobDetailsPage({
                       {formatSalary(salaryRange)}
                     </div>
                     {/* Display skills tags */}
-                    {skills?.data?.slice(0, 5).map((skill: { id: number; attributes: { name: string } }) => (
+                    {skills?.slice(0, 5).map((skill: { id: number; name: string }) => (
                       <div
                         key={skill.id}
                         className="rounded-md bg-muted px-2.5 py-1 text-sm"
                       >
-                        {skill.attributes.name}
+                        {skill.name}
                       </div>
                     ))}
                   </div>
@@ -308,17 +338,7 @@ export default function JobDetailsPage({
                     {/* Description */}
                     <h3>About the Role</h3>
                     <div dangerouslySetInnerHTML={{ 
-                      __html: Description ? 
-                        Description.map((block: { 
-                          type: string; 
-                          children?: { text: string }[] 
-                        }) => {
-                          if (block.type === 'paragraph' && block.children && block.children.length > 0) {
-                            return `<p>${block.children.map((child) => child.text).join('')}</p>`;
-                          }
-                          return '';
-                        }).join('') 
-                        : '<p>No description provided.</p>' 
+                      __html: renderRichText(Description)
                     }} />
 
                     {/* Responsibilities */}
@@ -326,22 +346,7 @@ export default function JobDetailsPage({
                       <>
                         <h3>Responsibilities</h3>
                         <div dangerouslySetInnerHTML={{ 
-                          __html: responsibilities.map((block: {
-                            type: string;
-                            children?: { 
-                              children?: { text: string }[];
-                              text?: string;
-                            }[]
-                          }) => {
-                            if (block.type === 'list' && block.children) {
-                              return `<ul>${block.children.map((item) => 
-                                `<li>${item.children?.map((child) => child.text).join('') || ''}</li>`
-                              ).join('')}</ul>`;
-                            } else if (block.type === 'paragraph' && block.children) {
-                              return `<p>${block.children.map((child) => child.text).join('')}</p>`;
-                            }
-                            return '';
-                          }).join('') 
+                          __html: renderRichText(responsibilities)
                         }} />
                       </>
                     )}
@@ -351,22 +356,7 @@ export default function JobDetailsPage({
                       <>
                         <h3>Requirements</h3>
                         <div dangerouslySetInnerHTML={{ 
-                          __html: requirements.map((block: {
-                            type: string;
-                            children?: { 
-                              children?: { text: string }[];
-                              text?: string;
-                            }[]
-                          }) => {
-                            if (block.type === 'list' && block.children) {
-                              return `<ul>${block.children.map((item) => 
-                                `<li>${item.children?.map((child) => child.text).join('') || ''}</li>`
-                              ).join('')}</ul>`;
-                            } else if (block.type === 'paragraph' && block.children) {
-                              return `<p>${block.children.map((child) => child.text).join('')}</p>`;
-                            }
-                            return '';
-                          }).join('') 
+                          __html: renderRichText(requirements)
                         }} />
                       </>
                     )}
@@ -376,31 +366,28 @@ export default function JobDetailsPage({
                       <>
                         <h3>Benefits</h3>
                         <div dangerouslySetInnerHTML={{ 
-                          __html: benefits.map((block: {
-                            type: string;
-                            children?: { 
-                              children?: { text: string }[];
-                              text?: string;
-                            }[]
-                          }) => {
-                            if (block.type === 'list' && block.children) {
-                              return `<ul>${block.children.map((item) => 
-                                `<li>${item.children?.map((child) => child.text).join('') || ''}</li>`
-                              ).join('')}</ul>`;
-                            } else if (block.type === 'paragraph' && block.children) {
-                              return `<p>${block.children.map((child) => child.text).join('')}</p>`;
-                            }
-                            return '';
-                          }).join('') 
+                          __html: renderRichText(benefits)
+                        }} />
+                      </>
+                    )}
+
+                    {/* Eligibility Criteria if available */}
+                    {eligibilityCriteria && (
+                      <>
+                        <h3>Eligibility Criteria</h3>
+                        <div dangerouslySetInnerHTML={{ 
+                          __html: renderRichText(eligibilityCriteria)
                         }} />
                       </>
                     )}
 
                     {/* Company Information */}
-                    {company?.attributes?.description && (
+                    {jobCompany?.description && (
                       <>
-                        <h3>About {company.attributes.name}</h3>
-                        <p>{company.attributes.description}</p>
+                        <h3>About {jobCompany.name}</h3>
+                        <div dangerouslySetInnerHTML={{ 
+                          __html: renderRichText(jobCompany.description)
+                        }} />
                       </>
                     )}
                   </div>
@@ -418,7 +405,7 @@ export default function JobDetailsPage({
                 </CardHeader>
                 <CardContent className="flex justify-start">
                   <Button size="lg" asChild>
-                    <Link href={`/jobs/${params.id}/apply`}>Apply for this position</Link>
+                    <Link href={`/jobs/${jobId}/apply`}>Apply for this position</Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -446,10 +433,10 @@ export default function JobDetailsPage({
                     <>
                       <div className="flex items-center gap-4">
                         <div className="flex h-12 w-12 items-center justify-center rounded-md bg-muted">
-                          {company.attributes.logo?.data ? (
+                          {jobCompany?.logo && jobCompany.logo.length > 0 ? (
                             <Image 
-                              src={company.attributes.logo.data.attributes.url} 
-                              alt={company.attributes.name}
+                              src={jobCompany.logo[0].url} 
+                              alt={jobCompany.name}
                               className="object-contain"
                               width={40}
                               height={40}
@@ -459,43 +446,43 @@ export default function JobDetailsPage({
                           )}
                         </div>
                         <div>
-                          <h3 className="font-semibold">{company.attributes.name}</h3>
+                          <h3 className="font-semibold">{jobCompany?.name}</h3>
                           <p className="text-sm text-muted-foreground">
-                            {company.attributes.industry?.data?.attributes?.name || 'Technology'}
+                            Technology
                           </p>
                         </div>
                       </div>
                       <Separator />
                       
-                      {company.attributes.website && (
+                      {jobCompany?.website && (
                         <div className="space-y-2">
                           <h4 className="text-sm font-semibold">Website</h4>
                           <p className="text-sm text-muted-foreground">
                             <a 
-                              href={company.attributes.website.startsWith('http') ? 
-                                company.attributes.website : 
-                                `https://${company.attributes.website}`} 
+                              href={jobCompany.website.startsWith('http') ? 
+                                jobCompany.website : 
+                                `https://${jobCompany.website}`} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               className="hover:underline"
                             >
-                              {company.attributes.website}
+                              {jobCompany.website}
                             </a>
                           </p>
                         </div>
                       )}
 
-                      {company.attributes.location && (
+                      {jobCompany?.location && (
                         <div className="space-y-2">
                           <h4 className="text-sm font-semibold">Location</h4>
                           <p className="text-sm text-muted-foreground">
-                            {company.attributes.location}
+                            {jobCompany.location}
                           </p>
                         </div>
                       )}
                       
                       <Button variant="outline" className="w-full" asChild>
-                        <Link href={`/companies/${company.id}`}>View Company Profile</Link>
+                        <Link href={`/companies/${jobCompany?.id || ''}`}>View Company Profile</Link>
                       </Button>
                     </>
                   )}
