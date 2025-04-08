@@ -1,6 +1,24 @@
-import { API_URL } from './utils';
+import { API_URL, apiClient } from './utils';
 import { JobSearchParams, StrapiResponse, Job, CompanySearchParams } from './types';
 import { getAuthHeader } from './auth';
+import axios from 'axios';
+
+/**
+ * Helper function to make authenticated requests
+ * This ensures all API calls include the auth header if a token exists
+ */
+async function authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  // Always include authentication header if available
+  const headers = {
+    ...options.headers,
+    ...getAuthHeader(),
+  };
+
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+}
 
 // Helper to build query parameters for Strapi filters
 function buildStrapiQuery(params: JobSearchParams): string {
@@ -10,19 +28,17 @@ function buildStrapiQuery(params: JobSearchParams): string {
   queryParams.push(`pagination[page]=${params.page || 1}`);
   queryParams.push(`pagination[pageSize]=${params.pageSize || 10}`);
   
-  // Add filters
-  if (params.title) {
-    queryParams.push(`filters[Title][$containsi]=${encodeURIComponent(params.title)}`);
+  // Add search term
+  if (params.searchTerm) {
+    queryParams.push(`filters[$or][0][title][$containsi]=${encodeURIComponent(params.searchTerm)}`);
+    queryParams.push(`filters[$or][1][description][$containsi]=${encodeURIComponent(params.searchTerm)}`);
   }
   
+  // Add location filter
   if (params.location) {
     queryParams.push(`filters[location][$containsi]=${encodeURIComponent(params.location)}`);
   }
-  
-  if (params.remoteOnly) {
-    queryParams.push('filters[isRemote][$eq]=true');
-  }
-  
+
   if (params.jobType && params.jobType.length > 0) {
     const jobTypeFilters = params.jobType.map(type => 
       `filters[jobType][$eq]=${encodeURIComponent(type)}`
@@ -161,14 +177,14 @@ function buildSkillsQuery(params: any = {}): string {
   }
   
   if (params.category) {
-    queryParams.push(`filters[category][id][$eq]=${params.category}`);
+    queryParams.push(`filters[skill_category][id][$eq]=${params.category}`);
   }
   
   // Add sort
   queryParams.push('sort=name:asc');
   
-  // Add category population using the correct format
-  queryParams.push('populate[0]=category');
+  // Add proper relationship population using the correct field name
+  queryParams.push('populate[0]=skill_category');
   
   return queryParams.join('&');
 }
@@ -190,93 +206,65 @@ export const notificationsApi = {
       queryParams.push('filters[isRead][$eq]=false');
     }
     
-    const response = await fetch(`${API_URL}/api/notifications?${queryParams.join('&')}`, {
-      headers: {
-        ...getAuthHeader()
-      }
-    });
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(`/api/notifications?${queryParams.join('&')}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
       throw new Error('Failed to fetch notifications');
     }
-    
-    return response.json();
   },
   
   // Get unread notification count
   getUnreadCount: async (userId: number): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/notifications/count?filters[users_permissions_user][id][$eq]=${userId}&filters[isRead][$eq]=false`,
-      {
-        headers: {
-          ...getAuthHeader()
-        }
-      }
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/notifications/count?filters[users_permissions_user][id][$eq]=${userId}&filters[isRead][$eq]=false`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch unread notification count:', error);
       throw new Error('Failed to fetch unread notification count');
     }
-    
-    return response.json();
   },
   
   // Mark notification as read
   markAsRead: async (notificationId: number): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/notifications/${notificationId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeader()
-      },
-      body: JSON.stringify({
+    try {
+      const response = await apiClient.put(`/api/notifications/${notificationId}`, {
         data: {
           isRead: true
         }
-      }),
-    });
-    
-    if (!response.ok) {
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
       throw new Error('Failed to mark notification as read');
     }
-    
-    return response.json();
   },
   
   // Mark all notifications as read
   markAllAsRead: async (userId: number): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/notifications/mark-all-read`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeader()
-      },
-      body: JSON.stringify({
+    try {
+      const response = await apiClient.post(`/api/notifications/mark-all-read`, {
         userId
-      }),
-    });
-    
-    if (!response.ok) {
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
       throw new Error('Failed to mark all notifications as read');
     }
-    
-    return response.json();
   },
   
   // Delete a notification
   deleteNotification: async (notificationId: number): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/notifications/${notificationId}`, {
-      method: 'DELETE',
-      headers: {
-        ...getAuthHeader()
-      }
-    });
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.delete(`/api/notifications/${notificationId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to delete notification:', error);
       throw new Error('Failed to delete notification');
     }
-    
-    return response.json();
   }
 };
 
@@ -284,13 +272,13 @@ export const jobsApi = {
   // Get all jobs with pagination and optional filters
   getJobs: async (params: JobSearchParams = {}): Promise<StrapiResponse<Job>> => {
     const queryString = buildStrapiQuery(params);
-    const response = await fetch(`${API_URL}/api/jobs?${queryString}`);
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(`/api/jobs?${queryString}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch jobs:', error);
       throw new Error('Failed to fetch jobs');
     }
-    
-    return response.json();
   },
   
   // Get a single job by ID or slug
@@ -310,183 +298,166 @@ export const jobsApi = {
     ].join('&');
     
     const endpoint = isId 
-      ? `${API_URL}/api/jobs/${identifier}?${populateParams}` 
-      : `${API_URL}/api/jobs?filters[slug][$eq]=${identifier}&${populateParams}`;
+      ? `/api/jobs/${identifier}?${populateParams}` 
+      : `/api/jobs?filters[slug][$eq]=${identifier}&${populateParams}`;
     
-    const response = await fetch(endpoint);
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(endpoint);
+      const data = response.data;
+      
+      // If we queried by slug, we need to return the first item
+      if (!isId && data.data && Array.isArray(data.data)) {
+        return { data: data.data[0], meta: data.meta };
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch job details:', error);
       throw new Error('Failed to fetch job details');
     }
-    
-    const data = await response.json();
-    
-    // If we queried by slug, we need to return the first item
-    if (!isId && data.data && Array.isArray(data.data)) {
-      return { data: data.data[0], meta: data.meta };
-    }
-    
-    return data;
   },
   
   // Get similar jobs based on job ID, skills, or tags
   getSimilarJobs: async (jobId: number, limit = 5): Promise<StrapiResponse<Job>> => {
-    // First fetch the job to get its skills and tags
-    const jobResponse = await fetch(`${API_URL}/api/jobs/${jobId}?populate[0]=skills&populate[1]=tags`);
-    
-    if (!jobResponse.ok) {
-      throw new Error('Failed to fetch job details for similar jobs');
-    }
-    
-    const jobData = await jobResponse.json();
-    const job = jobData.data;
-    
-    let queryParams: string[] = [
-      `filters[id][$ne]=${jobId}`,
-      `pagination[pageSize]=${limit}`,
-      'populate[0]=company',
-      'populate[1]=skills',
-      'populate[2]=tags',
-      'sort=datePosted:desc'
-    ];
-    
-    // Add skill-based filtering if the job has skills
-    if (job.attributes.skills?.data?.length > 0) {
-      const skillIds = job.attributes.skills.data.map((skill: any) => skill.id);
-      const skillParams = skillIds.map((id: number) => `filters[skills][id][$eq]=${id}`);
-      queryParams = queryParams.concat(skillParams);
-    }
-    
-    const response = await fetch(`${API_URL}/api/jobs?${queryParams.join('&')}`);
-    
-    if (!response.ok) {
+    try {
+      // First fetch the job to get its skills and tags
+      const jobResponse = await apiClient.get(`/api/jobs/${jobId}?populate[0]=skills&populate[1]=tags`);
+      const jobData = jobResponse.data;
+      const job = jobData.data;
+      
+      let queryParams: string[] = [
+        `filters[id][$ne]=${jobId}`,
+        `pagination[pageSize]=${limit}`,
+        'populate[0]=company',
+        'populate[1]=skills',
+        'populate[2]=tags',
+        'sort=datePosted:desc'
+      ];
+      
+      // Add skill-based filtering if the job has skills
+      if (job.attributes.skills?.data?.length > 0) {
+        const skillIds = job.attributes.skills.data.map((skill: any) => skill.id);
+        const skillParams = skillIds.map((id: number) => `filters[skills][id][$eq]=${id}`);
+        queryParams = queryParams.concat(skillParams);
+      }
+      
+      const response = await apiClient.get(`/api/jobs?${queryParams.join('&')}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch similar jobs:', error);
       throw new Error('Failed to fetch similar jobs');
     }
-    
-    return response.json();
   },
   
   // Get popular job categories/tags
   getPopularTags: async (limit = 10): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/tags?pagination[pageSize]=${limit}&sort=jobs.count:desc`
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/tags?pagination[pageSize]=${limit}&sort=jobs.count:desc`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch popular job tags:', error);
       throw new Error('Failed to fetch popular job tags');
     }
-    
-    return response.json();
   },
   
   // Submit a job application
   submitApplication: async (jobId: number, applicationData: any): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/job-applications`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ 
+    try {
+      const response = await apiClient.post(`/api/job-applications`, { 
         data: {
           ...applicationData,
           job: jobId,
           applicationDate: new Date().toISOString(),
           status: 'pending'
         } 
-      }),
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to submit application');
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to submit application:', error);
+      const message = error.response?.data?.error?.message || 'Failed to submit application';
+      throw new Error(message);
     }
-    
-    return response.json();
   },
   
   // Get job applications for a user
   getUserApplications: async (userId: number): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/job-applications?filters[applicant][id][$eq]=${userId}&populate=job,job.company,resume&sort=applicationDate:desc`
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/job-applications?filters[applicant][id][$eq]=${userId}&populate=job,job.company,resume&sort=applicationDate:desc`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch user applications:', error);
       throw new Error('Failed to fetch user applications');
     }
-    
-    return response.json();
   },
   
   // Get details of a specific application
   getApplicationDetails: async (applicationId: number): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/job-applications/${applicationId}?populate=job,job.company,job.skills,resume`
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/job-applications/${applicationId}?populate=job,job.company,job.skills,resume`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch application details:', error);
       throw new Error('Failed to fetch application details');
     }
-    
-    return response.json();
   },
   
   // Update application status (e.g., withdrawn by applicant)
   updateApplicationStatus: async (applicationId: number, status: string): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/job-applications/${applicationId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    try {
+      const response = await apiClient.put(`/api/job-applications/${applicationId}`, {
         data: {
           status
         }
-      }),
-    });
-    
-    if (!response.ok) {
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update application status:', error);
       throw new Error('Failed to update application status');
     }
-    
-    return response.json();
   },
   
   // Get featured/premium job listings
   getFeaturedJobs: async (limit = 5): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/jobs?filters[featured][$eq]=true&pagination[pageSize]=${limit}&populate[0]=company&populate[1]=skills&sort=datePosted:desc`
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/jobs?filters[featured][$eq]=true&pagination[pageSize]=${limit}&populate[0]=company&populate[1]=skills&sort=datePosted:desc`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch featured jobs:', error);
       throw new Error('Failed to fetch featured jobs');
     }
-    
-    return response.json();
   },
   
   // Search jobs by skill matching
   searchJobsBySkills: async (skillIds: number[], limit = 10): Promise<any> => {
-    const skillParams = skillIds.map(id => `filters[skills][id][$eq]=${id}`).join('&');
-    const response = await fetch(
-      `${API_URL}/api/jobs?${skillParams}&pagination[pageSize]=${limit}&populate[0]=company&populate[1]=skills&sort=datePosted:desc`
-    );
-    
-    if (!response.ok) {
+    try {
+      const skillParams = skillIds.map(id => `filters[skills][id][$eq]=${id}`).join('&');
+      const response = await apiClient.get(
+        `/api/jobs?${skillParams}&pagination[pageSize]=${limit}&populate[0]=company&populate[1]=skills&sort=datePosted:desc`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch jobs by skills:', error);
       throw new Error('Failed to fetch jobs by skills');
     }
-    
-    return response.json();
   },
   
   // Get job statistics (for dashboard)
   getJobStatistics: async (): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/jobs/stats`);
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(`/api/jobs/stats`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch job statistics:', error);
       throw new Error('Failed to fetch job statistics');
     }
-    
-    return response.json();
   }
 };
 
@@ -494,432 +465,472 @@ export const companiesApi = {
   // Get all companies with pagination and filters
   getCompanies: async (params: CompanySearchParams = {}): Promise<any> => {
     const queryString = buildCompanyQuery(params);
-    const response = await fetch(`${API_URL}/api/companies?${queryString}`);
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(`/api/companies?${queryString}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch companies:', error);
       throw new Error('Failed to fetch companies');
     }
-    
-    return response.json();
   },
   
   // Get a single company by ID
   getCompany: async (id: number): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/companies/${id}?populate[0]=logo&populate[1]=industry&populate[2]=jobs&populate[3]=jobs.skills&populate[4]=jobs.tags`
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/companies/${id}?populate[0]=logo&populate[1]=industry&populate[2]=jobs&populate[3]=jobs.skills&populate[4]=jobs.tags`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch company details:', error);
       throw new Error('Failed to fetch company details');
     }
-    
-    return response.json();
   },
   
   // Get company jobs
   getCompanyJobs: async (companyId: number, page = 1, pageSize = 5): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/jobs?filters[company][id][$eq]=${companyId}&pagination[page]=${page}&pagination[pageSize]=${pageSize}&populate[0]=skills&populate[1]=tags&sort=datePosted:desc`
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/jobs?filters[company][id][$eq]=${companyId}&pagination[page]=${page}&pagination[pageSize]=${pageSize}&populate[0]=skills&populate[1]=tags&sort=datePosted:desc`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch company jobs:', error);
       throw new Error('Failed to fetch company jobs');
     }
-    
-    return response.json();
   },
   
   // Get trending companies (companies with most job postings)
   getTrendingCompanies: async (limit = 5): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/companies?pagination[pageSize]=${limit}&populate[0]=logo&sort=jobs.count:desc`
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/companies?pagination[pageSize]=${limit}&populate[0]=logo&sort=jobs.count:desc`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch trending companies:', error);
       throw new Error('Failed to fetch trending companies');
     }
-    
-    return response.json();
   },
   
   // Get company reviews
   getCompanyReviews: async (companyId: number, page = 1, pageSize = 5): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/reviews?filters[company][id][$eq]=${companyId}&pagination[page]=${page}&pagination[pageSize]==${pageSize}&sort=createdAt:desc`
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/reviews?filters[company][id][$eq]=${companyId}&pagination[page]=${page}&pagination[pageSize]==${pageSize}&sort=createdAt:desc`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch company reviews:', error);
       throw new Error('Failed to fetch company reviews');
     }
-    
-    return response.json();
   },
   
   // Submit company review
   submitCompanyReview: async (companyId: number, reviewData: any): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/reviews`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    try {
+      const response = await apiClient.post(`/api/reviews`, {
         data: {
           ...reviewData,
           company: companyId
         }
-      }),
-    });
-    
-    if (!response.ok) {
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to submit company review:', error);
       throw new Error('Failed to submit company review');
     }
-    
-    return response.json();
   },
   
   // Get company stats
   getCompanyStats: async (companyId: number): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/companies/${companyId}/stats`);
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(`/api/companies/${companyId}/stats`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch company statistics:', error);
       throw new Error('Failed to fetch company statistics');
     }
-    
-    return response.json();
   }
 };
 
 export const userApi = {
   // Get user profile
   getUserProfile: async (userId: number): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/job-seeker-profiles/${userId}?populate[0]=skills&populate[1]=certifications&populate[2]=education&populate[3]=experience&populate[4]=resumeFile&populate[5]=user`
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/job-seeker-profiles/${userId}?populate[0]=skills&populate[1]=certifications&populate[2]=education&populate[3]=experience&populate[4]=resumeFile&populate[5]=user`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
       throw new Error('Failed to fetch user profile');
     }
-    
-    return response.json();
   },
   
   // Update user profile
   updateUserProfile: async (userId: number, profileData: any): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/job-seeker-profiles/${userId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ data: profileData }),
-    });
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.put(`/api/job-seeker-profiles/${profileId}`, { 
+        data: profileData 
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update user profile:', error);
       throw new Error('Failed to update user profile');
     }
-    
-    return response.json();
   },
   
   // Save a job search
   saveJobSearch: async (userId: number, searchData: any): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/saved-searches`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ 
+    try {
+      const response = await apiClient.post(`/api/saved-searches`, {
         data: {
           ...searchData,
           user: userId
-        } 
-      }),
-    });
-    
-    if (!response.ok) {
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to save search:', error);
       throw new Error('Failed to save search');
     }
-    
-    return response.json();
   },
   
   // Get saved job searches
   getSavedSearches: async (userId: number): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/saved-searches?filters[user][id][$eq]=${userId}&sort=createdAt:desc`
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/saved-searches?filters[user][id][$eq]=${userId}&sort=createdAt:desc`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch saved searches:', error);
       throw new Error('Failed to fetch saved searches');
     }
-    
-    return response.json();
   },
   
   // Save job to favorites
   saveJob: async (userId: number, jobId: number): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/saved-jobs`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    try {
+      const response = await apiClient.post(`/api/saved-jobs`, {
         data: {
           user: userId,
           job: jobId
         }
-      }),
-    });
-    
-    if (!response.ok) {
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to save job:', error);
       throw new Error('Failed to save job');
     }
-    
-    return response.json();
   },
   
   // Remove job from favorites
   removeJob: async (savedJobId: number): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/saved-jobs/${savedJobId}`, {
-      method: 'DELETE',
-    });
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.delete(`/api/saved-jobs/${savedJobId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to remove saved job:', error);
       throw new Error('Failed to remove saved job');
     }
-    
-    return response.json();
   },
   
   // Get saved jobs
   getSavedJobs: async (userId: number): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/saved-jobs?filters[user][id][$eq]=${userId}&populate[0]=job&populate[1]=job.company&populate[2]=job.skills&sort=createdAt:desc`
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/saved-jobs?filters[user][id][$eq]=${userId}&populate[0]=job&populate[1]=job.company&populate[2]=job.skills&sort=createdAt:desc`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch saved jobs:', error);
       throw new Error('Failed to fetch saved jobs');
     }
-    
-    return response.json();
   },
   
   // Add education
   addEducation: async (profileId: number, educationData: any): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/educations`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        data: {
-          ...educationData,
-          profile: profileId
+    try {
+      // Format dates to yyyy-MM-dd
+      let startDate = educationData.startDate;
+      let endDate = educationData.endDate;
+      
+      // Ensure dates are in the correct format (yyyy-MM-dd)
+      if (startDate && !(typeof startDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(startDate))) {
+        const date = new Date(startDate);
+        if (!isNaN(date.getTime())) {
+          startDate = date.toISOString().split('T')[0]; // Format as yyyy-MM-dd
         }
-      }),
-    });
-    
-    if (!response.ok) {
+      }
+      
+      if (endDate && !(typeof endDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(endDate))) {
+        const date = new Date(endDate);
+        if (!isNaN(date.getTime())) {
+          endDate = date.toISOString().split('T')[0]; // Format as yyyy-MM-dd
+        }
+      }
+      
+      // Ensure only valid fields are included with properly formatted dates
+      const validData = {
+        institution: educationData.institution,
+        degree: educationData.degree,
+        fieldOfStudy: educationData.fieldOfStudy,
+        startDate: startDate,
+        endDate: endDate,
+        isCurrentEducation: educationData.isCurrentEducation,
+        description: educationData.description,
+        job_seeker_profile: profileId
+      };
+      
+      const response = await apiClient.post(`/api/educations`, {
+        data: validData
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to add education:', error);
       throw new Error('Failed to add education');
     }
-    
-    return response.json();
   },
   
   // Add experience
   addExperience: async (profileId: number, experienceData: any): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/experiences`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        data: {
-          ...experienceData,
-          profile: profileId
+    try {
+      // Format dates to yyyy-MM-dd
+      let startDate = experienceData.startDate;
+      let endDate = experienceData.endDate;
+      
+      // Ensure dates are in the correct format (yyyy-MM-dd)
+      if (startDate && !(typeof startDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(startDate))) {
+        const date = new Date(startDate);
+        if (!isNaN(date.getTime())) {
+          startDate = date.toISOString().split('T')[0]; // Format as yyyy-MM-dd
         }
-      }),
-    });
-    
-    if (!response.ok) {
+      }
+      
+      if (endDate && !(typeof endDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(endDate))) {
+        const date = new Date(endDate);
+        if (!isNaN(date.getTime())) {
+          endDate = date.toISOString().split('T')[0]; // Format as yyyy-MM-dd
+        }
+      }
+      
+      // Ensure only valid fields are included with properly formatted dates
+      const validData = {
+        jobTitle: experienceData.jobTitle,
+        companyName: experienceData.companyName,
+        location: experienceData.location,
+        startDate: startDate,
+        endDate: endDate,
+        isCurrentJob: experienceData.isCurrentJob,
+        description: experienceData.description,
+        job_seeker_profile: profileId
+      };
+      
+      const response = await apiClient.post(`/api/experiences`, {
+        data: validData
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to add experience:', error);
       throw new Error('Failed to add experience');
     }
-    
-    return response.json();
   },
   
   // Add certification
   addCertification: async (profileId: number, certificationData: any): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/certifications`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        data: {
-          ...certificationData,
-          profile: profileId
+    try {
+      // Format dates to yyyy-MM-dd
+      let issueDate = certificationData.issueDate;
+      let expirationDate = certificationData.expirationDate;
+      
+      // Ensure dates are in the correct format (yyyy-MM-dd)
+      if (issueDate && !(typeof issueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(issueDate))) {
+        const date = new Date(issueDate);
+        if (!isNaN(date.getTime())) {
+          issueDate = date.toISOString().split('T')[0]; // Format as yyyy-MM-dd
         }
-      }),
-    });
-    
-    if (!response.ok) {
+      }
+      
+      if (expirationDate && !(typeof expirationDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(expirationDate))) {
+        const date = new Date(expirationDate);
+        if (!isNaN(date.getTime())) {
+          expirationDate = date.toISOString().split('T')[0]; // Format as yyyy-MM-dd
+        }
+      }
+      
+      // Ensure only valid fields are included with properly formatted dates
+      const validData = {
+        name: certificationData.name,
+        issuingOrganization: certificationData.issuingOrganization,
+        issueDate: issueDate,
+        expirationDate: expirationDate,
+        credentialID: certificationData.credentialID,
+        credentialURL: certificationData.credentialURL,
+        job_seeker_profile: profileId
+      };
+      
+      const response = await apiClient.post(`/api/certifications`, {
+        data: validData
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to add certification:', error);
       throw new Error('Failed to add certification');
     }
-    
-    return response.json();
   },
   
   // Get job recommendations based on user profile
   getJobRecommendations: async (userId: number, limit = 5): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/job-recommendations?userId=${userId}&limit=${limit}`
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/job-recommendations?userId=${userId}&limit=${limit}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch job recommendations:', error);
       throw new Error('Failed to fetch job recommendations');
     }
-    
-    return response.json();
-  }
+  },
+  
+  // Update user profile skills
+  updateProfileSkills: async (profileId: number, skillIds: number[]): Promise<any> => {
+    try {
+      // For many-to-many relationships in Strapi, we need to use the connect format
+      const response = await apiClient.put(`/api/job-seeker-profiles/${profileId}`, { 
+        data: {
+          skills: {
+            connect: skillIds.map(id => ({ id }))
+          }
+        } 
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update profile skills:', error);
+      throw new Error('Failed to update profile skills');
+    }
+  },
 };
 
 export const skillsApi = {
   // Get all skills with optional filters
   getSkills: async (params: any = {}): Promise<any> => {
-    const queryString = buildSkillsQuery(params);
-    const response = await fetch(`${API_URL}/api/skills?${queryString}`);
-    
-    if (!response.ok) {
+    try {
+      const queryString = buildSkillsQuery(params);
+      const response = await apiClient.get(`/api/skills?${queryString}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch skills:', error);
       throw new Error('Failed to fetch skills');
     }
-    
-    return response.json();
   },
   
   // Create a new skill
   createSkill: async (skillData: { name: string; slug?: string; skill_category?: number }): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/skills`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeader()
-      },
-      body: JSON.stringify({
+    try {
+      const response = await apiClient.post(`/api/skills`, {
         data: skillData
-      }),
-    });
-    
-    if (!response.ok) {
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to create skill:', error);
       throw new Error('Failed to create skill');
     }
-    
-    return response.json();
   },
   
   // Get skill categories
   getSkillCategories: async (): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/skill-categories?sort=name:asc`);
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(`/api/skill-categories?sort=name:asc`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch skill categories:', error);
       throw new Error('Failed to fetch skill categories');
     }
-    
-    return response.json();
   },
   
   // Get popular skills (most used in job listings)
   getPopularSkills: async (limit = 20): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/skills?pagination[pageSize]=${limit}&sort=jobs.count:desc`
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/skills?pagination[pageSize]=${limit}&sort=jobs.count:desc`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch popular skills:', error);
       throw new Error('Failed to fetch popular skills');
     }
-    
-    return response.json();
   }
 };
 
 export const industryApi = {
   // Get all industries
   getIndustries: async (): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/industries?sort=name:asc`);
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(`/api/industries?sort=name:asc`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch industries:', error);
       throw new Error('Failed to fetch industries');
     }
-    
-    return response.json();
   }
 };
 
 export const notificationApi = {
   // Get user notifications with pagination
   getUserNotifications: async (userId: number, page = 1, pageSize = 10): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/notifications?filters[users_permissions_user][id][$eq]=${userId}&pagination[page]=${page}&pagination[pageSize]=${pageSize}&populate=job,job.company,job_application&sort=createdAt:desc`
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/notifications?filters[users_permissions_user][id][$eq]=${userId}&pagination[page]=${page}&pagination[pageSize]=${pageSize}&populate=job,job.company,job_application&sort=createdAt:desc`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
       throw new Error('Failed to fetch notifications');
     }
-    
-    return response.json();
   },
   
   // Mark notification as read
   markAsRead: async (notificationId: number): Promise<any> => {
-    const response = await fetch(`${API_URL}/api/notifications/${notificationId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    try {
+      const response = await apiClient.put(`/api/notifications/${notificationId}`, {
         data: {
           isRead: true
         }
-      }),
-    });
-    
-    if (!response.ok) {
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
       throw new Error('Failed to mark notification as read');
     }
-    
-    return response.json();
   },
   
   // Mark all notifications as read
   markAllAsRead: async (userId: number): Promise<any> => {
     // This would typically be a custom endpoint in your Strapi backend
-    const response = await fetch(`${API_URL}/api/notifications/mark-all-read`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    try {
+      const response = await apiClient.post(`/api/notifications/mark-all-read`, {
         userId
-      }),
-    });
-    
-    if (!response.ok) {
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
       throw new Error('Failed to mark all notifications as read');
     }
-    
-    return response.json();
   },
   
   // Get unread notification count
   getUnreadCount: async (userId: number): Promise<any> => {
-    const response = await fetch(
-      `${API_URL}/api/notifications?filters[users_permissions_user][id][$eq]=${userId}&filters[isRead][$eq]=false&pagination[pageSize]=1`
-    );
-    
-    if (!response.ok) {
+    try {
+      const response = await apiClient.get(
+        `/api/notifications?filters[users_permissions_user][id][$eq]=${userId}&filters[isRead][$eq]=false&pagination[pageSize]=1`
+      );
+      const data = response.data;
+      return { count: data.meta.pagination.total };
+    } catch (error) {
+      console.error('Failed to fetch unread notification count:', error);
       throw new Error('Failed to fetch unread notification count');
     }
-    
-    const data = await response.json();
-    return { count: data.meta.pagination.total };
   }
 };

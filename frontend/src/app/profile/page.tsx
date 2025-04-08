@@ -110,7 +110,14 @@ export default function ProfilePage() {
 
   const handleSaveProfile = async () => {
     try {
-      await userApi.updateUserProfile(MOCK_USER_ID, formState);
+      // Use the profile ID from the API response instead of user ID
+      const profileId = profile?.id;
+      
+      if (!profileId) {
+        throw new Error('Profile ID not found');
+      }
+      
+      await userApi.updateUserProfile(profileId, formState);
 
       toast({
         title: 'Profile updated',

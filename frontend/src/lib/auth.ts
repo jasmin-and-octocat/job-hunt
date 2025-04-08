@@ -1,4 +1,5 @@
-import { API_URL } from './utils';
+import { API_URL, apiClient } from './utils';
+import axios from 'axios';
 
 export interface AuthCredentials {
   identifier: string; // Username or email
@@ -83,92 +84,75 @@ export interface CompanyData {
 
 export const authApi = {
   login: async (credentials: AuthCredentials): Promise<AuthResponse> => {
-    const response = await fetch(`${API_URL}/api/auth/local`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Failed to login');
+    try {
+      const response = await apiClient.post(`/api/auth/local`, credentials);
+      
+      // Save the token immediately after successful login
+      if (response.data.jwt) {
+        authToken.set(response.data.jwt);
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      const message = error.response?.data?.error?.message || 'Failed to login';
+      throw new Error(message);
     }
-
-    return response.json();
   },
 
   register: async (data: RegisterData): Promise<AuthResponse> => {
-    const response = await fetch(`${API_URL}/api/auth/local/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Failed to register');
+    try {
+      const response = await apiClient.post(`/api/auth/local/register`, data);
+      
+      // Save the token immediately after successful registration
+      if (response.data.jwt) {
+        authToken.set(response.data.jwt);
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      const message = error.response?.data?.error?.message || 'Failed to register';
+      throw new Error(message);
     }
-
-    return response.json();
   },
 
   forgotPassword: async (data: ForgotPasswordData): Promise<{ ok: boolean }> => {
-    const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Failed to send reset password email');
+    try {
+      await apiClient.post(`/api/auth/forgot-password`, data);
+      return { ok: true };
+    } catch (error: any) {
+      const message = error.response?.data?.error?.message || 'Failed to send reset password email';
+      throw new Error(message);
     }
-
-    return { ok: true };
   },
 
   resetPassword: async (data: ResetPasswordData): Promise<AuthResponse> => {
-    const response = await fetch(`${API_URL}/api/auth/reset-password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Failed to reset password');
+    try {
+      const response = await apiClient.post(`/api/auth/reset-password`, data);
+      
+      // Save the token if a new one is provided
+      if (response.data.jwt) {
+        authToken.set(response.data.jwt);
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      const message = error.response?.data?.error?.message || 'Failed to reset password';
+      throw new Error(message);
     }
-
-    return response.json();
   },
 
-  getMe: async (token: string): Promise<any> => {
+  getMe: async (token?: string): Promise<any> => {
     try {
-      const response = await fetch(`${API_URL}/api/users/me?populate=job_seeker_profile,employer_profile`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        // Clear token if unauthorized (401)
-        if (response.status === 401) {
-          authToken.remove();
-          authUser.remove();
+      // The issue might be with query parameter format
+      // Using proper formatting with params object instead of query string
+      const response = await apiClient.get(`/api/users/me`, {
+        params: {
+          populate: ['job_seeker_profile', 'employer_profile']
         }
-        throw new Error('Failed to fetch user data');
-      }
-
-      return response.json();
-    } catch (error) {
+      });
+      return response.data;
+    } catch (error: any) {
+      // Clear token if unauthorized (401) - handled by apiClient interceptor
       console.error("Error in getMe:", error);
       throw error;
     }
@@ -176,8 +160,7 @@ export const authApi = {
 
   // Create a job seeker profile
   createJobSeekerProfile: async (profileData: JobSeekerProfileData): Promise<any> => {
-    const token = authToken.get();
-    if (!token) {
+    if (!authToken.isAuthenticated()) {
       throw new Error('Not authenticated');
     }
 
@@ -191,28 +174,22 @@ export const authApi = {
       };
     }
 
-    const response = await fetch(`${API_URL}/api/job-seeker-profiles`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ data: formattedData }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
+    try {
+      const response = await apiClient.post(`/api/job-seeker-profiles`, 
+        { data: formattedData }
+      );
+      
+      return response.data;
+    } catch (error: any) {
       console.error('Failed to create profile:', error);
-      throw new Error(error.error?.message || 'Failed to create job seeker profile');
+      const message = error.response?.data?.error?.message || 'Failed to create job seeker profile';
+      throw new Error(message);
     }
-
-    return response.json();
   },
 
   // Update a job seeker profile
   updateJobSeekerProfile: async (id: number, profileData: Partial<JobSeekerProfileData>): Promise<any> => {
-    const token = authToken.get();
-    if (!token) {
+    if (!authToken.isAuthenticated()) {
       throw new Error('Not authenticated');
     }
 
@@ -224,27 +201,21 @@ export const authApi = {
       };
     }
 
-    const response = await fetch(`${API_URL}/api/job-seeker-profiles/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ data: formattedData }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Failed to update job seeker profile');
+    try {
+      const response = await apiClient.put(`/api/job-seeker-profiles/${id}`,
+        { data: formattedData }
+      );
+      
+      return response.data;
+    } catch (error: any) {
+      const message = error.response?.data?.error?.message || 'Failed to update job seeker profile';
+      throw new Error(message);
     }
-
-    return response.json();
   },
 
   // Create an employer profile
   createEmployerProfile: async (profileData: EmployerProfileData): Promise<any> => {
-    const token = authToken.get();
-    if (!token) {
+    if (!authToken.isAuthenticated()) {
       throw new Error('Not authenticated');
     }
 
@@ -256,27 +227,21 @@ export const authApi = {
       };
     }
 
-    const response = await fetch(`${API_URL}/api/employer-profiles`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ data: formattedData }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Failed to create employer profile');
+    try {
+      const response = await apiClient.post(`/api/employer-profiles`,
+        { data: formattedData }
+      );
+      
+      return response.data;
+    } catch (error: any) {
+      const message = error.response?.data?.error?.message || 'Failed to create employer profile';
+      throw new Error(message);
     }
-
-    return response.json();
   },
 
   // Update an employer profile
   updateEmployerProfile: async (id: number, profileData: Partial<EmployerProfileData>): Promise<any> => {
-    const token = authToken.get();
-    if (!token) {
+    if (!authToken.isAuthenticated()) {
       throw new Error('Not authenticated');
     }
 
@@ -288,27 +253,21 @@ export const authApi = {
       };
     }
 
-    const response = await fetch(`${API_URL}/api/employer-profiles/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ data: formattedData }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Failed to update employer profile');
+    try {
+      const response = await apiClient.put(`/api/employer-profiles/${id}`,
+        { data: formattedData }
+      );
+      
+      return response.data;
+    } catch (error: any) {
+      const message = error.response?.data?.error?.message || 'Failed to update employer profile';
+      throw new Error(message);
     }
-
-    return response.json();
   },
 
   // Create a company
   createCompany: async (companyData: CompanyData): Promise<any> => {
-    const token = authToken.get();
-    if (!token) {
+    if (!authToken.isAuthenticated()) {
       throw new Error('Not authenticated');
     }
 
@@ -320,21 +279,16 @@ export const authApi = {
       };
     }
 
-    const response = await fetch(`${API_URL}/api/companies`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ data: formattedData }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Failed to create company');
+    try {
+      const response = await apiClient.post(`/api/companies`,
+        { data: formattedData }
+      );
+      
+      return response.data;
+    } catch (error: any) {
+      const message = error.response?.data?.error?.message || 'Failed to create company';
+      throw new Error(message);
     }
-
-    return response.json();
   }
 };
 
@@ -365,7 +319,7 @@ export const authToken = {
     return authToken.get() !== null;
   },
   
-  // New utility to check if token is likely expired
+  // Utility to check if token is likely expired
   isTokenExpired: (): boolean => {
     const token = authToken.get();
     if (!token) return true;
